@@ -1,0 +1,2 @@
+# Consumer-Behavior-Prediction
+The main objective of this project is to train a predictive model which will allow the company to maximize the profit of its next marketing campaign. A response model can provide a significant boost to the efficiency of a marketing campaign by increasing responses as well as reducing expenses. Therefore, this project is designed to predict who will respond to an offer for a product or service.
