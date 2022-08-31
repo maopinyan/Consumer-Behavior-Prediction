@@ -1,0 +1,377 @@
+---
+title: 'INFO 659 Final Group Project'
+output:
+  html_notebook: default
+  html_document:
+  df_print: paged
+  pdf_document: default
+---
+
+### **Group members:**  
+####        Alexandrea Morson
+####        Lauren Tagliaferro
+####        Maopin Yan
+####        Nicole Buccigrossi
+
+
+### **Date: 12/07/2021 **
+
+## Objective
+To predict who will respond to an offer for a product or service.
+
+
+## Data Source
+The data is originally provided in XLSX format and was converted to CSV format.
+
+It is available at: https://www.kaggle.com/rodsaldanha/arketing-campaign
+
+### Read Data and data clean.
+```{r}
+library(ggplot2)
+library(purrr)
+library(tidyr)
+library(caret)
+library("e1071")
+```
+
+```{r}
+cc <- read.csv("marketing_campaign.csv")
+head(cc)
+```
+There are totally 29 variables and 2240 instances in this dataset. 
+We found that there are 24 Nan values in the dataframe, we choose to drop those nan values as they are in a small amount. After we drop the nan values, there are 29 variables and 2216 rows.
+```{r}
+cc <- na.omit(cc)
+dim(cc)
+```
+
+### Data Transformation. 
+Transform the variables **AcceptedCmp1, AcceptedCmp2, AcceptedCmp3, AcceptedCmp4, AcceptedCmp5, Response, Complain** into a **categorical** (factor) variable (0 to "No", 1 to "Yes"):
+
+```{r}
+cc$AcceptedCmp1 <- factor(cc$AcceptedCmp1,levels=c(0,1), labels=c("No","Yes"))
+
+cc$AcceptedCmp2 <- factor(cc$AcceptedCmp2,levels=c(0,1), labels=c("No","Yes"))
+
+cc$AcceptedCmp3 <- factor(cc$AcceptedCmp3,levels=c(0,1), labels=c("No","Yes"))
+
+cc$AcceptedCmp4 <- factor(cc$AcceptedCmp4,levels=c(0,1), labels=c("No","Yes"))
+
+cc$AcceptedCmp5 <- factor(cc$AcceptedCmp5,levels=c(0,1), labels=c("No","Yes"))
+
+cc$Response <- factor(cc$Response,levels=c(0,1), labels=c("No","Yes"))
+
+cc$Complain <- factor(cc$Complain,levels=c(0,1), labels=c("No","Yes"))
+
+head(cc)
+```
+
+### Plot histagrams about the relationship between Response and all the other variables.
+
+**Response and Income. We found that with the increase of income, there is a higher probability of response "yes".**
+```{r}
+cc$logIncome = log(cc$Income)
+ggplot(cc, aes(x=logIncome, fill=Response, color=Response)) + 
+       geom_histogram(binwidth=0.2, position="stack", size = 0.5) +
+       scale_color_manual(values=c("black","black")) +
+       scale_fill_manual(values=c("red", "darkolivegreen4") )
+
+
+```
+
+
+**Response and Kidhome.**
+```{r}
+ggplot(cc, aes(x=Kidhome, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+From the histogram above we found that there is a great chance that there should be no response if there are more than 2 children in customer's household.
+
+**Response and Teenhome**
+```{r}
+ggplot(cc, aes(x=Teenhome, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+**Response and MntFishProducts**
+```{r}
+ggplot(cc, aes(x=MntFishProducts, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=10, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+
+**Response and MntMeatProducts**
+```{r}
+ggplot(cc, aes(x=MntMeatProducts, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=80, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+From the histogram above we found that the more a household spent on meat products in the last 2 years, the higher probability of the "Yes" response. 
+
+**Response and MntFruits**
+```{r}
+ggplot(cc, aes(x=MntFruits, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=30, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+**Response and MntSweetProducts**
+```{r}
+ggplot(cc, aes(x=MntSweetProducts, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=30, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+**Response and MntWines**
+```{r}
+ggplot(cc, aes(x=MntWines, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=50, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+From the histogram above we found that the more a household spent on wines in the last 2 years, the higher probability of the "Yes" response. 
+
+**Response and MntGoldProds**
+```{r}
+ggplot(cc, aes(x=MntGoldProds, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=20, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+**Response and NumDealsPurchases**
+```{r}
+ggplot(cc, aes(x=NumDealsPurchases, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+From the histogram above we found that when number of purchases made with discount equals to 1, the probability of Response of "Yes" will be high.
+
+
+**Response and NumCatalogPurchases**
+```{r}
+ggplot(cc, aes(x=NumCatalogPurchases, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1.5, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+**Response and NumStorePurchases**
+```{r}
+ggplot(cc, aes(x=NumStorePurchases, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+**Response and NumWebPurchases**
+```{r}
+ggplot(cc, aes(x=NumWebPurchases, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+From the histogram above we found that the probability of Response "Yes" is high when the number of purchases made through company's web site is between 9 to 12.
+
+**Response and NumWebVisitsMonth**
+```{r}
+ggplot(cc, aes(x=NumWebVisitsMonth, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=1, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+
+
+**Response and Recency**
+```{r}
+ggplot(cc, aes(x=Recency, fill=Response, color=Response)) + 
+  geom_histogram(binwidth=10, position="stack") +
+  scale_color_manual(values=c("black","black")) +
+  scale_fill_manual(values=c("red", "darkolivegreen4"))
+```
+#### View all the variables' distributions. 
+```{r}
+cc %>%
+  keep(is.numeric) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+    facet_wrap(~ key, scales = "free") +
+    geom_histogram()
+```
+Through the above plots, we can see that most of the variables are right skewness distributed. So we will do the modeling part using the original variables as well as the variables after logarithm transformation, and find the best variables for modeling. The following code is the log transformation.
+
+**Create a new dataframe (cc_new) and copy the original dataset.**
+```{r}
+cc_new = cc
+head(cc_new)
+```
+**Log transformation of some right skewness variables.**
+```{r}
+#cc_new$logIncome = log(cc_new$Income)
+cc_new$logMntFishProducts = log(cc_new$MntFishProducts)
+cc_new$logMntMeatProducts = log(cc_new$MntMeatProducts)
+cc_new$logMntWines = log(cc_new$MntWines)
+cc_new$logMntFruits = log(cc_new$MntFruits)
+cc_new$logMntSweetProducts = log(cc_new$MntSweetProducts)
+cc_new$logMntGoldProds = log(cc_new$MntGoldProds)
+```
+
+variables in cc_new look normal distributed now.
+```{r}
+cc_new %>%
+  keep(is.numeric) %>% 
+  gather() %>% 
+  ggplot(aes(value)) +
+    facet_wrap(~ key, scales = "free") +
+    geom_histogram()
+```
+Drop original columns before logarithm.
+```{r}
+cc_new = subset(cc_new, select = -c(Income, MntFishProducts, MntMeatProducts, MntWines, MntFruits, MntSweetProducts, MntGoldProds))
+head(cc_new)
+```
+We found that there are some Inf values after log transformation. We are going to transform those Inf values to 1, and drop nan values.
+```{r}
+cc_new[cc_new == 'Inf'] <- 1
+cc_new <- na.omit(cc_new)
+dim(cc_new)
+head(cc_new)
+```
+
+
+#### From the above data visualization, we got two dataset to do the modeling. One is the original dataset (cc), the second one is the dataset after logarithm transformation (cc_new).
+
+**Models on the original dataset (cc). Models we used for this dataset are SVM and Logistic Regression Model.**
+**We are going to split the dataset, 80% for training dataset (Train_new), 20% for testing dataset (Test_new).**
+```{r}
+set.seed(0)
+index_new<-createDataPartition(factor(cc$Response), p=0.8, list=F)
+
+Train_new<-cc[index_new,]
+nrow(Train_new)
+
+Test_new<-cc[-index_new,]
+nrow(Test_new)
+```
+To see whether the new parameters are in the dataset.
+```{r}
+head(Train_new)
+```
+
+### Model 1: SVM on the original dataset.
+**We are going to try how SVM classifier trained on the dataset without features selection. We are going to try cost = 1, and gamma = 0.5 on this model.**
+
+```{r}
+svm_model <- svm(Response ~ Income+Kidhome+ Teenhome+ Recency+ MntWines+ MntFruits+ MntMeatProducts+ MntFishProducts+ MntSweetProducts+ MntGoldProds+ NumDealsPurchases+ NumWebPurchases+ NumCatalogPurchases+ NumStorePurchases+ NumWebVisitsMonth+ Z_CostContact+ Z_Revenue, Train_new, kernel="radial", cost=1, gamma=0.5)
+summary(svm_model)
+```
+See the Confusion Matrix of the original datase under SVM model.
+```{r}
+prediction <- predict (svm_model, Test_new)
+confusionMatrix(prediction, Test_new$Response, dnn = c("Prediction", "Truth"))
+```
+**The results are very good, except the Kappa value is low. The Accuracy is 0.862, the precision is 0.992, the recall is 0.8654 from the confusion matrix.**
+
+### Model 2: Logistic Regression Model on the original dataset.
+**The next step is, we are going to use logistic regression model to train on the dataset.**
+
+We will train the Train_new dataset use all the features, and comparing the confusion matrix out with the new dataset after features selection. 
+
+**Apply logistic regresion model on the original dataset.**
+```{r}
+default_lr_model_all <- glm(Response ~ Income+Kidhome+ Teenhome+ Recency+ MntWines+ MntFruits+ MntMeatProducts+ MntFishProducts+ MntSweetProducts+ MntGoldProds+ NumDealsPurchases+ NumWebPurchases+ NumCatalogPurchases+ NumStorePurchases+ NumWebVisitsMonth+ Z_CostContact+ Z_Revenue, data = Train_new, family = "binomial")
+
+summary(default_lr_model_all)
+```
+```{r}
+pred_lr_all <- predict(default_lr_model_all, newdata = Test_new, type = "response")
+class(pred_lr_all)
+```
+```{r}
+pred_lr_class_all <- ifelse(pred_lr_all >= 0.3, 1, 0)
+class(pred_lr_class_all)
+result_table_all <- table(pred_lr_class_all, Test_new$Response)
+result_table_all
+```
+Get the confusion matrix. The results are fair, but not quite good as there are only 0.5 on the Precision value and 0.47 on the Recall value.
+```{r}
+results <- confusionMatrix(data=factor(pred_lr_class_all, levels=0:1),reference = factor(Test_new$Response, levels=0:1), positive = "1")
+print(results)
+```
+### Model 3: We do the logistic Regression model based on the selected features.
+**We will select 7 features with the lowest p-values: Teenhome, Recency, MntWines, MntMeatProducts, NumStorePurchases, NumWebVisitsMonth, NumWebPurchases. And use the logistic model train on the new dataset.**
+
+```{r}
+default_lr_model <- glm(Response ~ Teenhome+ Recency+ MntWines+ MntMeatProducts+ NumWebPurchases+ NumStorePurchases+ NumWebVisitsMonth, data = Train_new, family = "binomial")
+
+summary(default_lr_model)
+```
+
+```{r}
+pred_lr <- predict(default_lr_model, newdata = Test_new, type = "response")
+class(pred_lr)
+```
+We decrease pred_lr from 0.5 to 0.3 to increase the precision and recall value.
+```{r}
+pred_lr_class <- ifelse(pred_lr >= 0.3, 1, 0)
+class(pred_lr_class)
+result_table <- table(pred_lr_class, Test_new$Response)
+result_table
+```
+Confusion matrix for 7 selected features. Results are even worse than the model 2. 
+```{r}
+results <- confusionMatrix(data=factor(pred_lr_class, levels=0:1),reference = factor(Test_new$Response, levels=0:1), positive = "1")
+print(results)
+```
+
+### Model 4: SVM for the new dataset (cc_new), which is after log transformation.
+
+**We are going to split the dataset (after log transformation), 80% for training dataset (Train_new), 20% for testing dataset (Test_new).**
+
+For log transformation, there are some Inf and -Inf values. Then we do the transformation from Inf to 1, and -Inf to 0 (as 0 is the smallest value in the columns).
+```{r}
+cc_new[cc_new == 'Inf'] <- 1
+cc_new[cc_new == '-Inf'] <- 0
+cc_new[is.na(cc_new)] <- 1
+#View(cc_new)
+```
+
+We split the new dataset(dataset after log transformation) into 80% for training, and 20% for testing.
+```{r}
+set.seed(0)
+index_log<-createDataPartition(factor(cc_new$Response), p=0.8, list=F)
+
+Train_log<-cc_new[index_log,]
+nrow(Train_log)
+
+Test_log<-cc_new[-index_log,]
+nrow(Test_log)
+```
+
+**We are going to try how SVM classifier trained on the dataset(cc_new) without features selection. We are going to try cost = 1, and gamma = 0.5 on this model.**
+
+```{r}
+library("e1071")
+svm_model_log <- svm(Response ~ Kidhome + Teenhome + Recency+ NumDealsPurchases +NumWebPurchases + NumCatalogPurchases + NumStorePurchases + NumWebVisitsMonth + logMntFishProducts+logMntMeatProducts+logMntWines + logMntFruits + logMntSweetProducts + logMntGoldProds, Train_log, kernel="radial", cost=1, gamma=0.5)
+summary(svm_model_log)
+```
+Below is the confusion matrix for the new dataset(after log tranformation). We got overall accuracy of 0.8597, 0.9814 for precison, and 0.8703 for Recall value.
+
+```{r}
+prediction_log <- predict (svm_model_log, Test_log)
+confusionMatrix(prediction_log, Test_log$Response, dnn = c("Prediction", "Truth"))
+```
+
+### Results
+Below is the Evaluation Results of Different Models.
+
+![Evaluation Metrics for the 4 models.](Screenshot 2021-12-10 000509.png)
